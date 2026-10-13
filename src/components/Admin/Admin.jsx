@@ -4,6 +4,7 @@ import {
   collection,
   addDoc,
   deleteDoc,
+  updateDoc,
   doc,
   onSnapshot,
 } from "firebase/firestore";
@@ -11,8 +12,6 @@ import {
   LayoutDashboard,
   BookOpen,
   Users,
-  Trophy,
-  MessageCircleQuestion,
   Bell,
   Plus,
   Search,
@@ -24,22 +23,25 @@ import {
   Menu,
   ChevronRight,
   ChevronDown,
-  GraduationCap,
   Code2,
   Server,
   Box,
   Bot,
   Sparkles,
-  Clock,
+  // Natijalar va Savollar bo'limlari uchun — keyinroq yoqiladi:
+  // Trophy,
+  // MessageCircleQuestion,
+  // Star,
+  // Quote,
 } from "lucide-react";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "courses", label: "Kurslar", icon: BookOpen, countKey: "courses" },
-  { id: "students", label: "O'quvchilar", icon: GraduationCap, countKey: "students" },
   { id: "mentors", label: "Mentorlar", icon: Users, countKey: "mentors" },
-  { id: "results", label: "Natijalar", icon: Trophy },
-  { id: "questions", label: "Savollar", icon: MessageCircleQuestion },
+  // Hozircha ishga tushirilmagan — keyinroq yoqiladi:
+  // { id: "results", label: "Natijalar", icon: Trophy, countKey: "results" },
+  // { id: "questions", label: "Savollar", icon: MessageCircleQuestion, countKey: "questions" },
 ];
 
 const AVATAR_COLORS = [
@@ -126,15 +128,14 @@ function Admin({ onLogout }) {
 
   const [courseModalOpen, setCourseModalOpen] = useState(false);
   const [mentorModalOpen, setMentorModalOpen] = useState(false);
-  const [studentModalOpen, setStudentModalOpen] = useState(false);
+
+  const [editingCourseId, setEditingCourseId] = useState(null);
+  const [editingMentorId, setEditingMentorId] = useState(null);
 
   const [courses, setCourses] = useState([]);
   const [mentors, setMentors] = useState([]);
-  const [students, setStudents] = useState([]);
-  const [resultsCount] = useState(0);
 
   const [courseSearch, setCourseSearch] = useState("");
-  const [studentSearch, setStudentSearch] = useState("");
   const [mentorSearch, setMentorSearch] = useState("");
 
   const [courseTitle, setCourseTitle] = useState("");
@@ -144,9 +145,21 @@ function Admin({ onLogout }) {
   const [mentorName, setMentorName] = useState("");
   const [mentorField, setMentorField] = useState("");
 
-  const [studentFullName, setStudentFullName] = useState("");
-  const [studentCourse, setStudentCourse] = useState("");
-  const [studentTime, setStudentTime] = useState("");
+  // Hozircha ishga tushirilmagan — Natijalar va Savollar uchun state'lar (keyinroq yoqiladi):
+  // const [resultModalOpen, setResultModalOpen] = useState(false);
+  // const [questionModalOpen, setQuestionModalOpen] = useState(false);
+  // const [editingResultId, setEditingResultId] = useState(null);
+  // const [editingQuestionId, setEditingQuestionId] = useState(null);
+  // const [results, setResults] = useState([]);
+  // const [questions, setQuestions] = useState([]);
+  // const [resultSearch, setResultSearch] = useState("");
+  // const [questionSearch, setQuestionSearch] = useState("");
+  // const [resultName, setResultName] = useState("");
+  // const [resultCourse, setResultCourse] = useState("");
+  // const [resultAchievement, setResultAchievement] = useState("");
+  // const [resultRating, setResultRating] = useState("");
+  // const [questionTitle, setQuestionTitle] = useState("");
+  // const [questionAnswer, setQuestionAnswer] = useState("");
 
   const activeItem = NAV_ITEMS.find((item) => item.id === activeTab);
 
@@ -159,35 +172,69 @@ function Admin({ onLogout }) {
       setMentors(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
 
-    const unsubStudents = onSnapshot(collection(db, "students"), (snap) => {
-      setStudents(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
+    // Hozircha ishga tushirilmagan — keyinroq yoqiladi:
+    // const unsubResults = onSnapshot(collection(db, "results"), (snap) => {
+    //   setResults(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    // });
+    // const unsubQuestions = onSnapshot(collection(db, "questions"), (snap) => {
+    //   setQuestions(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+    // });
 
     return () => {
       unsubCourses();
       unsubMentors();
-      unsubStudents();
+      // unsubResults();
+      // unsubQuestions();
     };
   }, []);
 
-  const addCourse = async (e) => {
+  const openAddCourse = () => {
+    setEditingCourseId(null);
+    setCourseTitle("");
+    setCourseMentor("");
+    setCourseStudents("");
+    setCourseModalOpen(true);
+  };
+
+  const openEditCourse = (course) => {
+    setEditingCourseId(course.id);
+    setCourseTitle(course.title || "");
+    setCourseMentor(course.mentor || "");
+    setCourseStudents(String(course.students ?? ""));
+    setCourseModalOpen(true);
+  };
+
+  const closeCourseModal = () => {
+    setCourseModalOpen(false);
+    setEditingCourseId(null);
+    setCourseTitle("");
+    setCourseMentor("");
+    setCourseStudents("");
+  };
+
+  const submitCourse = async (e) => {
     e.preventDefault();
     if (!courseTitle || !courseMentor) return;
 
     try {
-      await addDoc(collection(db, "courses"), {
-        title: courseTitle,
-        mentor: courseMentor,
-        students: Number(courseStudents) || 0,
-        status: "Faol",
-      });
+      if (editingCourseId) {
+        await updateDoc(doc(db, "courses", editingCourseId), {
+          title: courseTitle,
+          mentor: courseMentor,
+          students: Number(courseStudents) || 0,
+        });
+      } else {
+        await addDoc(collection(db, "courses"), {
+          title: courseTitle,
+          mentor: courseMentor,
+          students: Number(courseStudents) || 0,
+          status: "Faol",
+        });
+      }
 
-      setCourseTitle("");
-      setCourseMentor("");
-      setCourseStudents("");
-      setCourseModalOpen(false);
+      closeCourseModal();
     } catch (err) {
-      console.error("Kurs qo'shishda xato:", err);
+      console.error("Kursni saqlashda xato:", err);
     }
   };
 
@@ -199,23 +246,49 @@ function Admin({ onLogout }) {
     }
   };
 
-  const addMentor = async (e) => {
+  const openAddMentor = () => {
+    setEditingMentorId(null);
+    setMentorName("");
+    setMentorField("");
+    setMentorModalOpen(true);
+  };
+
+  const openEditMentor = (mentor) => {
+    setEditingMentorId(mentor.id);
+    setMentorName(mentor.name || "");
+    setMentorField(mentor.field || "");
+    setMentorModalOpen(true);
+  };
+
+  const closeMentorModal = () => {
+    setMentorModalOpen(false);
+    setEditingMentorId(null);
+    setMentorName("");
+    setMentorField("");
+  };
+
+  const submitMentor = async (e) => {
     e.preventDefault();
     if (!mentorName || !mentorField) return;
 
     try {
-      await addDoc(collection(db, "mentors"), {
-        name: mentorName,
-        field: mentorField,
-        status: "Faol",
-        color: AVATAR_COLORS[mentors.length % AVATAR_COLORS.length],
-      });
+      if (editingMentorId) {
+        await updateDoc(doc(db, "mentors", editingMentorId), {
+          name: mentorName,
+          field: mentorField,
+        });
+      } else {
+        await addDoc(collection(db, "mentors"), {
+          name: mentorName,
+          field: mentorField,
+          status: "Faol",
+          color: AVATAR_COLORS[mentors.length % AVATAR_COLORS.length],
+        });
+      }
 
-      setMentorName("");
-      setMentorField("");
-      setMentorModalOpen(false);
+      closeMentorModal();
     } catch (err) {
-      console.error("Mentor qo'shishda xato:", err);
+      console.error("Mentorni saqlashda xato:", err);
     }
   };
 
@@ -227,35 +300,127 @@ function Admin({ onLogout }) {
     }
   };
 
-  const addStudent = async (e) => {
+  // Hozircha ishga tushirilmagan — Natijalar va Savollar handler'lari (keyinroq yoqiladi):
+  /*
+  // --- Natijalar (results) ---
+  const openAddResult = () => {
+    setEditingResultId(null);
+    setResultName("");
+    setResultCourse("");
+    setResultAchievement("");
+    setResultRating("");
+    setResultModalOpen(true);
+  };
+
+  const openEditResult = (result) => {
+    setEditingResultId(result.id);
+    setResultName(result.name || "");
+    setResultCourse(result.course || "");
+    setResultAchievement(result.achievement || "");
+    setResultRating(String(result.rating ?? ""));
+    setResultModalOpen(true);
+  };
+
+  const closeResultModal = () => {
+    setResultModalOpen(false);
+    setEditingResultId(null);
+    setResultName("");
+    setResultCourse("");
+    setResultAchievement("");
+    setResultRating("");
+  };
+
+  const submitResult = async (e) => {
     e.preventDefault();
-    if (!studentFullName || !studentCourse || !studentTime) return;
+    if (!resultName || !resultAchievement) return;
+
+    const rating = Math.min(5, Math.max(0, Number(resultRating) || 0));
 
     try {
-      await addDoc(collection(db, "students"), {
-        fullName: studentFullName,
-        course: studentCourse,
-        time: studentTime,
-        status: "Faol",
-        color: AVATAR_COLORS[students.length % AVATAR_COLORS.length],
-      });
+      if (editingResultId) {
+        await updateDoc(doc(db, "results", editingResultId), {
+          name: resultName,
+          course: resultCourse,
+          achievement: resultAchievement,
+          rating,
+        });
+      } else {
+        await addDoc(collection(db, "results"), {
+          name: resultName,
+          course: resultCourse,
+          achievement: resultAchievement,
+          rating,
+          color: AVATAR_COLORS[results.length % AVATAR_COLORS.length],
+        });
+      }
 
-      setStudentFullName("");
-      setStudentCourse("");
-      setStudentTime("");
-      setStudentModalOpen(false);
+      closeResultModal();
     } catch (err) {
-      console.error("O'quvchi qo'shishda xato:", err);
+      console.error("Natijani saqlashda xato:", err);
     }
   };
 
-  const deleteStudent = async (id) => {
+  const deleteResult = async (id) => {
     try {
-      await deleteDoc(doc(db, "students", id));
+      await deleteDoc(doc(db, "results", id));
     } catch (err) {
-      console.error("O'quvchini o'chirishda xato:", err);
+      console.error("Natijani o'chirishda xato:", err);
     }
   };
+
+  // --- Savollar (questions / FAQ) ---
+  const openAddQuestion = () => {
+    setEditingQuestionId(null);
+    setQuestionTitle("");
+    setQuestionAnswer("");
+    setQuestionModalOpen(true);
+  };
+
+  const openEditQuestion = (question) => {
+    setEditingQuestionId(question.id);
+    setQuestionTitle(question.title || "");
+    setQuestionAnswer(question.answer || "");
+    setQuestionModalOpen(true);
+  };
+
+  const closeQuestionModal = () => {
+    setQuestionModalOpen(false);
+    setEditingQuestionId(null);
+    setQuestionTitle("");
+    setQuestionAnswer("");
+  };
+
+  const submitQuestion = async (e) => {
+    e.preventDefault();
+    if (!questionTitle || !questionAnswer) return;
+
+    try {
+      if (editingQuestionId) {
+        await updateDoc(doc(db, "questions", editingQuestionId), {
+          title: questionTitle,
+          answer: questionAnswer,
+        });
+      } else {
+        await addDoc(collection(db, "questions"), {
+          title: questionTitle,
+          answer: questionAnswer,
+        });
+      }
+
+      closeQuestionModal();
+    } catch (err) {
+      console.error("Savolni saqlashda xato:", err);
+    }
+  };
+
+  const deleteQuestion = async (id) => {
+    try {
+      await deleteDoc(doc(db, "questions", id));
+    } catch (err) {
+      console.error("Savolni o'chirishda xato:", err);
+    }
+  };
+  */
 
   const filteredCourses = courses.filter(
     (course) =>
@@ -263,17 +428,24 @@ function Admin({ onLogout }) {
       course.mentor.toLowerCase().includes(courseSearch.toLowerCase())
   );
 
-  const filteredStudents = students.filter(
-    (student) =>
-      student.fullName.toLowerCase().includes(studentSearch.toLowerCase()) ||
-      student.course.toLowerCase().includes(studentSearch.toLowerCase())
-  );
-
   const filteredMentors = mentors.filter(
     (mentor) =>
       mentor.name.toLowerCase().includes(mentorSearch.toLowerCase()) ||
       mentor.field.toLowerCase().includes(mentorSearch.toLowerCase())
   );
+
+  // Hozircha ishga tushirilmagan — keyinroq yoqiladi:
+  // const filteredResults = results.filter(
+  //   (result) =>
+  //     (result.name || "").toLowerCase().includes(resultSearch.toLowerCase()) ||
+  //     (result.achievement || "").toLowerCase().includes(resultSearch.toLowerCase()) ||
+  //     (result.course || "").toLowerCase().includes(resultSearch.toLowerCase())
+  // );
+  // const filteredQuestions = questions.filter(
+  //   (question) =>
+  //     (question.title || "").toLowerCase().includes(questionSearch.toLowerCase()) ||
+  //     (question.answer || "").toLowerCase().includes(questionSearch.toLowerCase())
+  // );
 
   return (
     <div className="min-h-screen bg-[#f6f8f7] text-[#111816] font-['Plus_Jakarta_Sans']">
@@ -331,8 +503,6 @@ function Admin({ onLogout }) {
                 ? courses.length
                 : item.countKey === "mentors"
                 ? mentors.length
-                : item.countKey === "students"
-                ? students.length
                 : null;
 
             return (
@@ -480,14 +650,6 @@ function Admin({ onLogout }) {
                   badgeColor="text-[#159447]"
                 />
                 <StatCard
-                  icon={GraduationCap}
-                  tint="bg-blue-50 text-blue-600"
-                  label="O'quvchilar"
-                  value={students.length}
-                  badge="+0%"
-                  badgeColor="text-blue-600"
-                />
-                <StatCard
                   icon={Users}
                   tint="bg-purple-50 text-purple-600"
                   label="Mentorlar"
@@ -495,29 +657,32 @@ function Admin({ onLogout }) {
                   badge="+0%"
                   badgeColor="text-purple-600"
                 />
+                {/* Hozircha ishga tushirilmagan — keyinroq yoqiladi:
                 <StatCard
                   icon={Trophy}
                   tint="bg-orange-50 text-orange-500"
                   label="Natijalar"
-                  value={resultsCount}
+                  value={results.length}
                   badge="+0%"
                   badgeColor="text-orange-500"
                 />
+                <StatCard
+                  icon={MessageCircleQuestion}
+                  tint="bg-blue-50 text-blue-600"
+                  label="Savollar"
+                  value={questions.length}
+                  badge="+0%"
+                  badgeColor="text-blue-600"
+                />
+                */}
               </section>
-
-              <StudentsSection
-                students={filteredStudents}
-                searchValue={studentSearch}
-                onSearchChange={setStudentSearch}
-                onAdd={() => setStudentModalOpen(true)}
-                onDelete={deleteStudent}
-              />
 
               <CoursesSection
                 courses={filteredCourses}
                 searchValue={courseSearch}
                 onSearchChange={setCourseSearch}
-                onAdd={() => setCourseModalOpen(true)}
+                onAdd={openAddCourse}
+                onEdit={openEditCourse}
                 onDelete={deleteCourse}
               />
             </>
@@ -528,19 +693,9 @@ function Admin({ onLogout }) {
               courses={filteredCourses}
               searchValue={courseSearch}
               onSearchChange={setCourseSearch}
-              onAdd={() => setCourseModalOpen(true)}
+              onAdd={openAddCourse}
+              onEdit={openEditCourse}
               onDelete={deleteCourse}
-              full
-            />
-          )}
-
-          {activeTab === "students" && (
-            <StudentsSection
-              students={filteredStudents}
-              searchValue={studentSearch}
-              onSearchChange={setStudentSearch}
-              onAdd={() => setStudentModalOpen(true)}
-              onDelete={deleteStudent}
               full
             />
           )}
@@ -550,31 +705,48 @@ function Admin({ onLogout }) {
               mentors={filteredMentors}
               searchValue={mentorSearch}
               onSearchChange={setMentorSearch}
-              onAdd={() => setMentorModalOpen(true)}
+              onAdd={openAddMentor}
+              onEdit={openEditMentor}
               onDelete={deleteMentor}
               full
             />
           )}
 
-          {(activeTab === "results" || activeTab === "questions") && (
-            <section className="rounded-[22px] border border-[#e5ebe7] bg-white p-12">
-              <EmptyState
-                icon={activeItem ? activeItem.icon : BookOpen}
-                title="Tez orada"
-                subtitle="Bu bo'lim hali ishlab chiqilmoqda"
-              />
-            </section>
+          {/* Hozircha ishga tushirilmagan — keyinroq yoqiladi:
+          {activeTab === "results" && (
+            <ResultsSection
+              results={filteredResults}
+              searchValue={resultSearch}
+              onSearchChange={setResultSearch}
+              onAdd={openAddResult}
+              onEdit={openEditResult}
+              onDelete={deleteResult}
+              full
+            />
           )}
+
+          {activeTab === "questions" && (
+            <QuestionsSection
+              questions={filteredQuestions}
+              searchValue={questionSearch}
+              onSearchChange={setQuestionSearch}
+              onAdd={openAddQuestion}
+              onEdit={openEditQuestion}
+              onDelete={deleteQuestion}
+              full
+            />
+          )}
+          */}
         </div>
       </main>
 
       {courseModalOpen && (
         <Modal
-          title="Yangi kurs qo'shish"
+          title={editingCourseId ? "Kursni tahrirlash" : "Yangi kurs qo'shish"}
           subtitle="Kurs haqida ma'lumotlarni kiriting"
-          onClose={() => setCourseModalOpen(false)}
+          onClose={closeCourseModal}
         >
-          <form onSubmit={addCourse}>
+          <form onSubmit={submitCourse}>
             <div className="space-y-5">
               <TextField
                 label="Kurs nomi"
@@ -616,8 +788,8 @@ function Admin({ onLogout }) {
             </div>
 
             <ModalButtons
-              onClose={() => setCourseModalOpen(false)}
-              submit="Kursni qo'shish"
+              onClose={closeCourseModal}
+              submit={editingCourseId ? "O'zgarishni saqlash" : "Kursni qo'shish"}
             />
           </form>
         </Modal>
@@ -625,11 +797,11 @@ function Admin({ onLogout }) {
 
       {mentorModalOpen && (
         <Modal
-          title="Yangi mentor qo'shish"
+          title={editingMentorId ? "Mentorni tahrirlash" : "Yangi mentor qo'shish"}
           subtitle="Mentor haqida ma'lumotlarni kiriting"
-          onClose={() => setMentorModalOpen(false)}
+          onClose={closeMentorModal}
         >
-          <form onSubmit={addMentor}>
+          <form onSubmit={submitMentor}>
             <div className="space-y-5">
               <TextField
                 label="Mentor ismi"
@@ -647,37 +819,35 @@ function Admin({ onLogout }) {
             </div>
 
             <ModalButtons
-              onClose={() => setMentorModalOpen(false)}
-              submit="Mentorni qo'shish"
+              onClose={closeMentorModal}
+              submit={editingMentorId ? "O'zgarishni saqlash" : "Mentorni qo'shish"}
             />
           </form>
         </Modal>
       )}
 
-      {studentModalOpen && (
+      {/* Hozircha ishga tushirilmagan — Natijalar va Savollar modallari (keyinroq yoqiladi):
+      {resultModalOpen && (
         <Modal
-          title="Yangi o'quvchi qo'shish"
-          subtitle="O'quvchi ma'lumotlarini kiriting"
-          onClose={() => setStudentModalOpen(false)}
+          title={editingResultId ? "Natijani tahrirlash" : "Yangi natija qo'shish"}
+          subtitle="O'quvchi natijasi haqida ma'lumot kiriting"
+          onClose={closeResultModal}
         >
-          <form onSubmit={addStudent}>
+          <form onSubmit={submitResult}>
             <div className="space-y-5">
               <TextField
-                label="Ism va Familiya"
-                value={studentFullName}
-                onChange={setStudentFullName}
+                label="O'quvchi ismi"
+                value={resultName}
+                onChange={setResultName}
                 placeholder="Masalan: O'tkirbek Abdumajidov"
               />
 
               <div>
-                <label className="mb-2 block text-xs font-bold">
-                  Qaysi kurs
-                </label>
-
+                <label className="mb-2 block text-xs font-bold">Kurs</label>
                 {courses.length > 0 ? (
                   <CustomSelect
-                    value={studentCourse}
-                    onChange={setStudentCourse}
+                    value={resultCourse}
+                    onChange={setResultCourse}
                     placeholder="Kursni tanlang"
                     options={courses.map((course) => ({
                       value: course.title,
@@ -687,28 +857,69 @@ function Admin({ onLogout }) {
                 ) : (
                   <TextField
                     label=""
-                    value={studentCourse}
-                    onChange={setStudentCourse}
+                    value={resultCourse}
+                    onChange={setResultCourse}
                     placeholder="Masalan: Frontend"
                   />
                 )}
               </div>
 
               <TextField
-                label="Kurs vaqti"
-                value={studentTime}
-                onChange={setStudentTime}
-                placeholder="14:00 - 16:00"
+                label="Natija / Yutuq"
+                value={resultAchievement}
+                onChange={setResultAchievement}
+                placeholder="Masalan: Google'da ishga joylashdi"
+              />
+
+              <TextField
+                label="Baho (0-5)"
+                type="number"
+                value={resultRating}
+                onChange={setResultRating}
+                placeholder="5"
               />
             </div>
 
             <ModalButtons
-              onClose={() => setStudentModalOpen(false)}
-              submit="O'quvchini qo'shish"
+              onClose={closeResultModal}
+              submit={editingResultId ? "O'zgarishni saqlash" : "Natijani qo'shish"}
             />
           </form>
         </Modal>
       )}
+
+      {questionModalOpen && (
+        <Modal
+          title={editingQuestionId ? "Savolni tahrirlash" : "Yangi savol qo'shish"}
+          subtitle="Ko'p so'raladigan savol va javobni kiriting"
+          onClose={closeQuestionModal}
+        >
+          <form onSubmit={submitQuestion}>
+            <div className="space-y-5">
+              <TextField
+                label="Savol"
+                value={questionTitle}
+                onChange={setQuestionTitle}
+                placeholder="Masalan: Kurslar qancha davom etadi?"
+              />
+
+              <TextArea
+                label="Javob"
+                value={questionAnswer}
+                onChange={setQuestionAnswer}
+                placeholder="Savolga batafsil javob yozing"
+              />
+            </div>
+
+            <ModalButtons
+              onClose={closeQuestionModal}
+              submit={editingQuestionId ? "O'zgarishni saqlash" : "Savolni qo'shish"}
+            />
+          </form>
+        </Modal>
+      )}
+      */}
+
     </div>
   );
 }
@@ -812,108 +1023,7 @@ function StatCard({ icon: Icon, tint, label, value, badge, badgeColor, onAdd }) 
   );
 }
 
-function StudentsSection({ students, searchValue, onSearchChange, onAdd, onDelete, full }) {
-  return (
-    <section className={`rounded-[22px] border border-[#e5ebe7] bg-white ${full ? "" : "mb-8"}`}>
-      <div className="flex flex-col gap-4 border-b border-[#edf0ee] p-5 md:flex-row md:items-center md:justify-between md:p-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-              <GraduationCap size={18} />
-            </div>
-            <h2 className="text-lg font-extrabold">O'quvchilar</h2>
-          </div>
-          <p className="mt-2 text-xs text-gray-400">
-            Platformaga a'zo bo'lgan barcha o'quvchilar
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <SearchInput value={searchValue} onChange={onSearchChange} placeholder="O'quvchi qidirish..." />
-          <button
-            onClick={onAdd}
-            className="flex items-center justify-center gap-2 rounded-xl bg-[#111816] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#159447]"
-          >
-            <Plus size={18} />
-            O'quvchi qo'shish
-          </button>
-        </div>
-      </div>
-
-      {students.length === 0 ? (
-        <EmptyState icon={GraduationCap} title="Hali o'quvchi qo'shilmagan" subtitle="Yangi o'quvchi qo'shish uchun tugmani bosing" />
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[750px]">
-            <thead>
-              <tr className="border-b border-[#edf0ee] text-left">
-                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">O'quvchi</th>
-                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Kurs</th>
-                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Dars vaqti</th>
-                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Holat</th>
-                <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-gray-400">Amal</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((student) => {
-                const { icon: CourseIcon, style } = getCourseStyle(student.course);
-                return (
-                  <tr key={student.id} className="border-b border-[#f0f2f1] last:border-0 transition hover:bg-[#fafcfb]">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-bold text-white ${student.color}`}>
-                          {student.fullName.charAt(0).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold">{student.fullName}</p>
-                          <p className="mt-0.5 text-[11px] text-gray-400">O'quvchi</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${style}`}>
-                          <CourseIcon size={15} />
-                        </div>
-                        <span className="text-sm font-bold">{student.course}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-1.5 text-xs font-medium text-gray-600">
-                        <Clock size={14} className="text-gray-400" />
-                        {student.time}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <span className="rounded-full bg-[#eaf7f0] px-3 py-1.5 text-[11px] font-bold text-[#159447]">
-                        {student.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex justify-end gap-2">
-                        <button className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
-                          <Pencil size={15} />
-                        </button>
-                        <button onClick={() => onDelete(student.id)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500">
-                          <Trash2 size={15} />
-                        </button>
-                        <button className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-100">
-                          <MoreHorizontal size={15} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </section>
-  );
-}
-
-function CoursesSection({ courses, searchValue, onSearchChange, onAdd, onDelete, full }) {
+function CoursesSection({ courses, searchValue, onSearchChange, onAdd, onEdit, onDelete, full }) {
   return (
     <section className={`rounded-[22px] border border-[#e5ebe7] bg-white ${full ? "" : "mb-8"}`}>
       <div className="flex flex-col gap-4 border-b border-[#edf0ee] p-5 md:flex-row md:items-center md:justify-between md:p-6">
@@ -973,7 +1083,7 @@ function CoursesSection({ courses, searchValue, onSearchChange, onAdd, onDelete,
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex justify-end gap-2">
-                        <button className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
+                        <button onClick={() => onEdit(course)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
                           <Pencil size={15} />
                         </button>
                         <button onClick={() => onDelete(course.id)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500">
@@ -995,7 +1105,7 @@ function CoursesSection({ courses, searchValue, onSearchChange, onAdd, onDelete,
   );
 }
 
-function MentorsSection({ mentors, searchValue, onSearchChange, onAdd, onDelete, full }) {
+function MentorsSection({ mentors, searchValue, onSearchChange, onAdd, onEdit, onDelete, full }) {
   return (
     <section className={`rounded-[22px] border border-[#e5ebe7] bg-white ${full ? "" : "mb-8"}`}>
       <div className="flex flex-col gap-4 border-b border-[#edf0ee] p-5 md:flex-row md:items-center md:justify-between md:p-6">
@@ -1056,7 +1166,7 @@ function MentorsSection({ mentors, searchValue, onSearchChange, onAdd, onDelete,
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex justify-end gap-2">
-                      <button className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
+                      <button onClick={() => onEdit(mentor)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
                         <Pencil size={15} />
                       </button>
                       <button onClick={() => onDelete(mentor.id)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500">
@@ -1076,6 +1186,148 @@ function MentorsSection({ mentors, searchValue, onSearchChange, onAdd, onDelete,
     </section>
   );
 }
+
+// Hozircha ishga tushirilmagan — Natijalar va Savollar bo'lim komponentlari (keyinroq yoqiladi):
+/*
+function ResultsSection({ results, searchValue, onSearchChange, onAdd, onEdit, onDelete, full }) {
+  return (
+    <section className={`rounded-[22px] border border-[#e5ebe7] bg-white ${full ? "" : "mb-8"}`}>
+      <div className="flex flex-col gap-4 border-b border-[#edf0ee] p-5 md:flex-row md:items-center md:justify-between md:p-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-orange-50 text-orange-500">
+              <Trophy size={18} />
+            </div>
+            <h2 className="text-lg font-extrabold">Natijalar</h2>
+          </div>
+          <p className="mt-2 text-xs text-gray-400">O'quvchilarning yutuqlari va natijalari</p>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <SearchInput value={searchValue} onChange={onSearchChange} placeholder="Natija qidirish..." />
+          <button
+            onClick={onAdd}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#111816] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#159447]"
+          >
+            <Plus size={18} />
+            Natija qo'shish
+          </button>
+        </div>
+      </div>
+
+      {results.length === 0 ? (
+        <EmptyState icon={Trophy} title="Hali natija qo'shilmagan" subtitle="Yangi natija qo'shish uchun tugmani bosing" />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
+            <thead>
+              <tr className="border-b border-[#edf0ee] text-left">
+                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">O'quvchi</th>
+                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Kurs</th>
+                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Natija</th>
+                <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-wider text-gray-400">Baho</th>
+                <th className="px-6 py-4 text-right text-[11px] font-bold uppercase tracking-wider text-gray-400">Amal</th>
+              </tr>
+            </thead>
+            <tbody>
+              {results.map((result) => (
+                <tr key={result.id} className="border-b border-[#f0f2f1] last:border-0 transition hover:bg-[#fafcfb]">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white ${result.color || "bg-orange-500"}`}>
+                        {(result.name || "?").charAt(0).toUpperCase()}
+                      </div>
+                      <p className="text-sm font-bold">{result.name}</p>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-600">{result.course || "—"}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-600">{result.achievement}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-0.5">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Star
+                          key={i}
+                          size={14}
+                          className={i < (result.rating || 0) ? "fill-orange-400 text-orange-400" : "text-gray-300"}
+                        />
+                      ))}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex justify-end gap-2">
+                      <button onClick={() => onEdit(result)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
+                        <Pencil size={15} />
+                      </button>
+                      <button onClick={() => onDelete(result.id)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500">
+                        <Trash2 size={15} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function QuestionsSection({ questions, searchValue, onSearchChange, onAdd, onEdit, onDelete, full }) {
+  return (
+    <section className={`rounded-[22px] border border-[#e5ebe7] bg-white ${full ? "" : "mb-8"}`}>
+      <div className="flex flex-col gap-4 border-b border-[#edf0ee] p-5 md:flex-row md:items-center md:justify-between md:p-6">
+        <div>
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+              <MessageCircleQuestion size={18} />
+            </div>
+            <h2 className="text-lg font-extrabold">Savollar</h2>
+          </div>
+          <p className="mt-2 text-xs text-gray-400">Ko'p so'raladigan savollar (FAQ)</p>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <SearchInput value={searchValue} onChange={onSearchChange} placeholder="Savol qidirish..." />
+          <button
+            onClick={onAdd}
+            className="flex items-center justify-center gap-2 rounded-xl bg-[#111816] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#159447]"
+          >
+            <Plus size={18} />
+            Savol qo'shish
+          </button>
+        </div>
+      </div>
+
+      {questions.length === 0 ? (
+        <EmptyState icon={MessageCircleQuestion} title="Hali savol qo'shilmagan" subtitle="Yangi savol qo'shish uchun tugmani bosing" />
+      ) : (
+        <div className="divide-y divide-[#f0f2f1]">
+          {questions.map((question) => (
+            <div key={question.id} className="flex items-start gap-4 p-5 md:p-6">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#eaf7f0] text-[#159447]">
+                <Quote size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold">{question.title}</p>
+                <p className="mt-1 text-sm leading-6 text-gray-500">{question.answer}</p>
+              </div>
+              <div className="flex shrink-0 gap-2">
+                <button onClick={() => onEdit(question)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600">
+                  <Pencil size={15} />
+                </button>
+                <button onClick={() => onDelete(question.id)} className="rounded-lg border border-gray-200 p-2 text-gray-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-500">
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+*/
 
 function SearchInput({ value, onChange, placeholder }) {
   return (
@@ -1150,5 +1402,23 @@ function TextField({ label, value, onChange, placeholder, type = "text" }) {
     </div>
   );
 }
+
+// Hozircha ishga tushirilmagan — Savollar bo'limi bilan birga keyinroq yoqiladi:
+/*
+function TextArea({ label, value, onChange, placeholder }) {
+  return (
+    <div>
+      {label && <label className="mb-2 block text-xs font-bold">{label}</label>}
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={4}
+        className="w-full resize-none rounded-xl border border-[#dfe5e2] px-4 py-3 text-sm outline-none transition focus:border-[#159447] focus:ring-4 focus:ring-[#159447]/10"
+      />
+    </div>
+  );
+}
+*/
 
 export default Admin;
